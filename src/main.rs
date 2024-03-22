@@ -10,7 +10,17 @@ fn main() {
         age: 1000,
     };
 
-    println!("{:?}", p);
+    let mut manage: Vec<Person> = Vec::new();
+
+    manage.push(p);
+
+    let c = Company {
+        name: "Tkpedei".to_string(),
+        company_type: CompanyType::Tbk,
+        management: manage,
+    };
+
+    println!("{}", c.is_tbk());
 }
 
 #[derive(Debug)]
@@ -26,5 +36,45 @@ impl Person {
 
     fn print_age(&self) {
         println!("the age is {}", self.age);
+    }
+}
+
+#[derive(Debug)]
+struct Company {
+    name: String,
+    company_type: CompanyType,
+    management: Vec<Person>,
+}
+
+#[derive(Debug)]
+enum CompanyType {
+    Inc,
+    Gmbh(String),
+    Ltd,
+    Tbk,
+}
+
+trait Tbk {
+    fn is_tbk(&self) -> bool;
+    fn company_name(&self) -> String;
+    fn print_management(&self);
+}
+
+impl Tbk for Company {
+    fn is_tbk(&self) -> bool {
+        match self.company_type {
+            CompanyType::Inc => false,
+            CompanyType::Ltd => false,
+            CompanyType::Gmbh(_) => false,
+            CompanyType::Tbk => true,
+        }
+    }
+
+    fn company_name(&self) -> String {
+        self.name.clone()
+    }
+
+    fn print_management(&self) {
+        println!("{:?}", self.management);
     }
 }
