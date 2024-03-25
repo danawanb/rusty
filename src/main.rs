@@ -58,6 +58,7 @@ trait Tbk {
     fn is_tbk(&self) -> bool;
     fn company_name(&self) -> String;
     fn print_management(&self);
+    fn print_gmbh(&self);
 }
 
 impl Tbk for Company {
@@ -77,4 +78,6 @@ impl Tbk for Company {
     fn print_management(&self) {
         println!("{:?}", self.management);
     }
+
+    fn print_gmbh(&self) {}
 }
