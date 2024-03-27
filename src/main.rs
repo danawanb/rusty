@@ -4,6 +4,15 @@ struct Rectangle {
     y: i32,
 }
 
+impl Rectangle {
+    fn luas(&self) -> i32 {
+        self.x * self.y
+    }
+
+    fn keliling(&self) -> i32 {
+        2 * (self.x + self.y)
+    }
+}
 fn main() {
     let x = vec![1, 2, 3, 5];
 
@@ -29,7 +38,11 @@ fn main() {
     println!("{}", c.is_tbk());
 
     let kotak = Rectangle { x: 6, y: 7 };
-    println!("{:?}", kotak);
+    println!(
+        "luas : {:?}, keliling : {:?}",
+        kotak.luas(),
+        kotak.keliling()
+    );
 }
 
 #[derive(Debug)]
