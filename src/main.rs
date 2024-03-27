@@ -1,3 +1,9 @@
+#[derive(Debug)]
+struct Rectangle {
+    x: i32,
+    y: i32,
+}
+
 fn main() {
     let x = vec![1, 2, 3, 5];
 
@@ -21,6 +27,9 @@ fn main() {
     };
 
     println!("{}", c.is_tbk());
+
+    let kotak = Rectangle { x: 6, y: 7 };
+    println!("{:?}", kotak);
 }
 
 #[derive(Debug)]
