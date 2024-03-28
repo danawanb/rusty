@@ -12,7 +12,20 @@ impl Rectangle {
     fn keliling(&self) -> i32 {
         2 * (self.x + self.y)
     }
+
+    fn double(&mut self) {
+        self.x *= 2;
+        self.y *= 2;
+    }
 }
+
+#[derive(Debug)]
+enum Color {
+    Red,
+    Green,
+    Blue,
+}
+
 fn main() {
     let x = vec![1, 2, 3, 5];
 
@@ -37,12 +50,18 @@ fn main() {
 
     println!("{}", c.is_tbk());
 
-    let kotak = Rectangle { x: 6, y: 7 };
+    let mut kotak = Rectangle { x: 6, y: 7 };
+    kotak.double();
+
     println!(
-        "luas : {:?}, keliling : {:?}",
+        "{:?} luas : {:?}, keliling : {:?}",
+        kotak,
         kotak.luas(),
         kotak.keliling()
     );
+
+    let ccolor = Color::Blue;
+    println!("{:?}", ccolor);
 }
 
 #[derive(Debug)]
