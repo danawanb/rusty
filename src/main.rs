@@ -27,6 +27,13 @@ enum Color {
 }
 
 fn main() {
+    let recc = Rectangle { x: 2, y: 2 };
+    let mut new_color: Vec<Rectangle> = Vec::new();
+    new_color.push(recc);
+    let rec2 = Rectangle { x: 6, y: 6 };
+    new_color.push(rec2);
+    println!("{:?}", new_color);
+
     let x = vec![1, 2, 3, 5];
 
     for j in x {
