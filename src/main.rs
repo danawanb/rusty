@@ -73,8 +73,7 @@ async fn create_user(
     // as JSON into a `User` type
     Json(payload): Json<User>,
 ) -> (StatusCode, Json<User>) {
-    // insert your application logic here
-
+    println!("User: {:?}", payload);
     // this will be converted into a JSON response
     // with a status code of `201 Created`
     (StatusCode::CREATED, Json(payload))
