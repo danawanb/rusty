@@ -25,6 +25,7 @@ async fn main() {
         .route("/bar", get(foo_bar))
         .route("/insert_user", get(show_form))
         .route("/do_insert", post(create_user))
+        .route("/do_insert_2", post(accept_form))
         .with_state(Arc::new(AppState { db: pool.clone() }));
 
     // run our app with hyper, listening globally on port 3000
@@ -92,17 +93,19 @@ async fn show_form() -> Html<&'static str> {
         r#"
         <!doctype html>
         <html>
-            <head></head>
+            <head>
+            
+            </head>
             <body>
-                <form action="/do_insert" method="post">
-                    <label for="name">
+                <form action="/do_insert_2" method="post">
+                    <label for="user">
                         Enter your name:
-                        <input type="text" name="name">
+                        <input type="text" name="user" id="user">
                     </label>
 
                     <label>
                         Enter your email:
-                        <input type="text" name="email">
+                        <input type="text" name="email" id="user">
                     </label>
 
                     <input type="submit" value="Subscribe!">
@@ -126,4 +129,19 @@ impl IntoResponse for AuthError {
         }));
         (status, body).into_response()
     }
+}
+
+async fn accept_form(Form(user): Form<User>) -> (StatusCode, Json<Responses<User>>){
+    println!("{:?}", user);
+    let res = Responses {
+        data : user
+    };
+    
+    (StatusCode::CREATED, Json(res))
+}
+
+
+#[derive(Serialize, Debug, Deserialize)]
+struct Responses <T> {
+    data : T,
 }
