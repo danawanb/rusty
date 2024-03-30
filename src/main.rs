@@ -1,9 +1,10 @@
 use axum:: {
-    extract::State, http::StatusCode, response::{Html, IntoResponse, Response}, routing::{get, post}, Form, Json, Router
+    extract::State, http::StatusCode, response::{Html, IntoResponse, Response}, routing::{get, post, MethodRouter}, Form, Json, Router
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
+use tower_http::services::ServeFile;
 
 use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
 
@@ -21,12 +22,13 @@ async fn main() {
 
 
     let app = Router::new()
-        .route("/api/healthchecker", get(get_foo))
+        // .route("/api/healthchecker", get(get_foo))
         .route("/bar", get(foo_bar))
         .route("/insert_user", get(show_form))
         .route("/do_insert", post(create_user))
         .route("/do_insert_2", post(accept_form))
-        .with_state(Arc::new(AppState { db: pool.clone() }));
+        .with_state(Arc::new(AppState { db: pool.clone() }))
+        .merge(using_serve_file_from_a_route());
 
     // run our app with hyper, listening globally on port 3000
     
@@ -35,9 +37,6 @@ async fn main() {
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn get_foo() {
-
-}
 
 #[derive(sqlx::FromRow, Serialize, Debug, Deserialize)]
 #[allow(dead_code)]
@@ -64,10 +63,18 @@ async fn foo_bar(
     }
 }
 
-// #[debug_handler]
-// fn insert_user(Form(user): Form<User>) -> (StatusCode, Json<User>) {
-//     (StatusCode::CREATED, Json(payload))
+// fn get_foo() -> Router {
+//     async fn handler() -> &'static str {
+//         "Hi from `GET /foo`"
+//     }
+
+//     route("/foo", get(handler))
 // }
+
+fn using_serve_file_from_a_route() -> Router {
+    Router::new().route_service("/foo", ServeFile::new("frontend/index.html"))
+}
+
 
 async fn create_user(
     // this argument tells axum to parse the request body
@@ -144,4 +151,8 @@ async fn accept_form(Form(user): Form<User>) -> (StatusCode, Json<Responses<User
 #[derive(Serialize, Debug, Deserialize)]
 struct Responses <T> {
     data : T,
+}
+
+fn route(path: &str, method_router: MethodRouter<()>) -> Router {
+    Router::new().route(path, method_router)
 }
