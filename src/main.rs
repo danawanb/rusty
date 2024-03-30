@@ -76,12 +76,12 @@ fn using_serve_file_from_a_route() -> Router {
         .fallback_service(serve_dir)
 }
 
-async fn create_user(  State(db): State<Arc<AppState>>, Json(payload): Json<User>) -> (StatusCode, Json<String>) {
+async fn create_user(  State(data): State<Arc<AppState>>, Json(payload): Json<User>) -> (StatusCode, Json<String>) {
     println!("User: {:?}", payload);
     let res = sqlx::query(r#"INSERT INTO users (user, email) VALUES (?, ?)"#)
         .bind(&payload.user)
         .bind(&payload.email)
-        .execute(&db.db)
+        .execute(&data.db)
         .await;
     match res {
         Ok(_) => (StatusCode::CREATED, Json("Berhasil Insert User".to_owned())),
