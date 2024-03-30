@@ -1,5 +1,5 @@
 use axum:: {
-    extract::State, http::StatusCode, response::{Html, IntoResponse, Response}, routing::{get, post, MethodRouter}, Form, Json, Router
+    extract::{Path, State}, http::StatusCode, response::{Html, IntoResponse, Response}, routing::{get, post, MethodRouter}, Form, Json, Router
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -27,6 +27,7 @@ async fn main() {
         .route("/insert_user", get(show_form))
         .route("/do_insert", post(create_user))
         .route("/do_insert_2", post(accept_form))
+        .route("/get_email_by_id/:id", get(get_email_by_id))
         .with_state(Arc::new(AppState { db: pool.clone() }))
         .merge(using_serve_file_from_a_route());
 
@@ -75,15 +76,33 @@ fn using_serve_file_from_a_route() -> Router {
         .fallback_service(serve_dir)
 }
 
-async fn create_user(
-    // this argument tells axum to parse the request body
-    // as JSON into a `User` type
-    Json(payload): Json<User>,
-) -> (StatusCode, Json<User>) {
+async fn create_user(  State(db): State<Arc<AppState>>, Json(payload): Json<User>) -> (StatusCode, Json<String>) {
     println!("User: {:?}", payload);
-    // this will be converted into a JSON response
-    // with a status code of `201 Created`
-    (StatusCode::CREATED, Json(payload))
+    let res = sqlx::query(r#"INSERT INTO users (user, email) VALUES (?, ?)"#)
+        .bind(&payload.user)
+        .bind(&payload.email)
+        .execute(&db.db)
+        .await;
+    match res {
+        Ok(_) => (StatusCode::CREATED, Json("Berhasil Insert User".to_owned())),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string()))
+    }
+    
+}
+
+async fn get_email_by_id(Path::<i32>(id): Path<i32>, State(data): State<Arc<AppState>>) -> impl IntoResponse {
+    let result = sqlx::query_as::<_, User>("SELECT user, email FROM users WHERE id = ?")
+        .bind(id)
+        .fetch_one(&data.db)
+        .await;
+
+    match result {
+        Ok(x) => Json(json!(x)),
+        Err(y) => Json(json!({
+            "error" : true,
+            "message" : y.to_string(),
+        })),
+    }
 }
 
 #[derive(Debug)]
