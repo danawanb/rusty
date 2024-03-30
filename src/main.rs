@@ -4,7 +4,7 @@ use axum:: {
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
-use tower_http::services::ServeFile;
+use tower_http::services::{ServeDir, ServeFile};
 
 use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
 
@@ -63,18 +63,17 @@ async fn foo_bar(
     }
 }
 
-// fn get_foo() -> Router {
-//     async fn handler() -> &'static str {
-//         "Hi from `GET /foo`"
-//     }
-
-//     route("/foo", get(handler))
-// }
-
 fn using_serve_file_from_a_route() -> Router {
-    Router::new().route_service("/foo", ServeFile::new("frontend/index.html"))
-}
+    // `ServeDir` allows setting a fallback if an asset is not found
+    // so with this `GET /assets/doesnt-exist.jpg` will return `index.html`
+    // rather than a 404
+    let serve_dir = ServeDir::new("./svelte/build").not_found_service(ServeFile::new("./svelte/build/index.html"));
 
+    Router::new()
+       // .route("/foo", get(|| async { "Hi from /foo" }))
+        .nest_service("/svelte", serve_dir.clone())
+        .fallback_service(serve_dir)
+}
 
 async fn create_user(
     // this argument tells axum to parse the request body
