@@ -7,6 +7,7 @@ use std::sync::Arc;
 use tower_http::services::{ServeDir, ServeFile};
 
 use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
+use rand::Rng;
 
 
 pub struct AppState {
@@ -75,6 +76,15 @@ fn using_serve_file_from_a_route() -> Router {
        // .route("/foo", get(|| async { "Hi from /foo" }))
         .nest_service("/svelte", serve_dir.clone())
         .fallback_service(serve_dir)
+}
+async fn get_random_color() -> impl IntoResponse {
+
+    let mut rng = rand::thread_rng();
+    let color: String = format!("#{:06x}", rng.gen::<u32>());
+
+    Json(json!({
+        "color": color
+    }))
 }
 
 async fn create_user(  State(data): State<Arc<AppState>>, Json(payload): Json<User>) -> (StatusCode, Json<String>) {
