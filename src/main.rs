@@ -27,6 +27,7 @@ async fn main() {
         .route("/insert_user", get(show_form))
         .route("/do_insert", post(create_user))
         .route("/do_insert_2", post(accept_form))
+        .route("/hello", get(get_name))
         .route("/get_email_by_id/:id", get(get_email_by_id))
         .with_state(Arc::new(AppState { db: pool.clone() }))
         .merge(using_serve_file_from_a_route());
@@ -103,6 +104,10 @@ async fn get_email_by_id(Path::<i32>(id): Path<i32>, State(data): State<Arc<AppS
             "message" : y.to_string(),
         })),
     }
+}
+
+async fn get_name(Path::<String>(name):Path<String>) -> impl IntoResponse {
+    Json(json!(name))
 }
 
 #[derive(Debug)]
