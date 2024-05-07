@@ -1,26 +1,29 @@
-use axum:: {
-    extract::{Path, State}, http::StatusCode, response::{Html, IntoResponse, Response}, routing::{get, post, MethodRouter}, Form, Json, Router
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::{Html, IntoResponse, Response},
+    routing::{get, post, MethodRouter},
+    Form, Json, Router,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
 use tower_http::services::{ServeDir, ServeFile};
 
-use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
 use rand::Rng;
-
+use sqlx::mysql::{MySqlPool, MySqlPoolOptions};
 
 pub struct AppState {
     db: MySqlPool,
-
 }
 
 #[tokio::main]
 async fn main() {
     let pool = MySqlPoolOptions::new()
         .max_connections(100)
-        .connect("mysql://root:@localhost:3306/test").await.unwrap();
-
+        .connect("mysql://root:@localhost:3306/test")
+        .await
+        .unwrap();
 
     let app = Router::new()
         // .route("/api/healthchecker", get(get_foo))
@@ -34,28 +37,27 @@ async fn main() {
         .merge(using_serve_file_from_a_route());
 
     // run our app with hyper, listening globally on port 3000
-    
+
     println!("🚀 Server started successfully");
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
     axum::serve(listener, app).await.unwrap();
 }
 
-
 #[derive(sqlx::FromRow, Serialize, Debug, Deserialize)]
 #[allow(dead_code)]
 struct User {
-    user : String,
-    email : String
+    user: String,
+    email: String,
 }
 
+async fn hello_name() -> impl IntoResponse {
+    StatusCode::OK;
+}
 
-async fn foo_bar(
-    State(data): State<Arc<AppState>>,
-) -> impl IntoResponse {
-    
+async fn foo_bar(State(data): State<Arc<AppState>>) -> impl IntoResponse {
     let result = sqlx::query_as::<_, User>("SELECT user, email FROM users LIMIT 1")
-    .fetch_one(&data.db)
-    .await;
+        .fetch_one(&data.db)
+        .await;
 
     match result {
         Ok(x) => Json(json!(x)),
@@ -70,15 +72,15 @@ fn using_serve_file_from_a_route() -> Router {
     // `ServeDir` allows setting a fallback if an asset is not found
     // so with this `GET /assets/doesnt-exist.jpg` will return `index.html`
     // rather than a 404
-    let serve_dir = ServeDir::new("./svelte/build").not_found_service(ServeFile::new("./svelte/build/index.html"));
+    let serve_dir = ServeDir::new("./svelte/build")
+        .not_found_service(ServeFile::new("./svelte/build/index.html"));
 
     Router::new()
-       // .route("/foo", get(|| async { "Hi from /foo" }))
+        // .route("/foo", get(|| async { "Hi from /foo" }))
         .nest_service("/svelte", serve_dir.clone())
         .fallback_service(serve_dir)
 }
 async fn get_random_color() -> impl IntoResponse {
-
     let mut rng = rand::thread_rng();
     let color: String = format!("#{:06x}", rng.gen::<u32>());
 
@@ -87,7 +89,10 @@ async fn get_random_color() -> impl IntoResponse {
     }))
 }
 
-async fn create_user(  State(data): State<Arc<AppState>>, Json(payload): Json<User>) -> (StatusCode, Json<String>) {
+async fn create_user(
+    State(data): State<Arc<AppState>>,
+    Json(payload): Json<User>,
+) -> (StatusCode, Json<String>) {
     println!("User: {:?}", payload);
     let res = sqlx::query(r#"INSERT INTO users (user, email) VALUES (?, ?)"#)
         .bind(&payload.user)
@@ -96,12 +101,14 @@ async fn create_user(  State(data): State<Arc<AppState>>, Json(payload): Json<Us
         .await;
     match res {
         Ok(_) => (StatusCode::CREATED, Json("Berhasil Insert User".to_owned())),
-        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string()))
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string())),
     }
-    
 }
 
-async fn get_email_by_id(Path::<i32>(id): Path<i32>, State(data): State<Arc<AppState>>) -> impl IntoResponse {
+async fn get_email_by_id(
+    Path::<i32>(id): Path<i32>,
+    State(data): State<Arc<AppState>>,
+) -> impl IntoResponse {
     let result = sqlx::query_as::<_, User>("SELECT user, email FROM users WHERE id = ?")
         .bind(id)
         .fetch_one(&data.db)
@@ -116,7 +123,7 @@ async fn get_email_by_id(Path::<i32>(id): Path<i32>, State(data): State<Arc<AppS
     }
 }
 
-async fn get_name(Path::<String>(name):Path<String>) -> impl IntoResponse {
+async fn get_name(Path::<String>(name): Path<String>) -> impl IntoResponse {
     Json(json!(name))
 }
 
@@ -171,19 +178,16 @@ impl IntoResponse for AuthError {
     }
 }
 
-async fn accept_form(Form(user): Form<User>) -> (StatusCode, Json<Responses<User>>){
+async fn accept_form(Form(user): Form<User>) -> (StatusCode, Json<Responses<User>>) {
     println!("{:?}", user);
-    let res = Responses {
-        data : user
-    };
-    
+    let res = Responses { data: user };
+
     (StatusCode::CREATED, Json(res))
 }
 
-
 #[derive(Serialize, Debug, Deserialize)]
-struct Responses <T> {
-    data : T,
+struct Responses<T> {
+    data: T,
 }
 
 fn route(path: &str, method_router: MethodRouter<()>) -> Router {
