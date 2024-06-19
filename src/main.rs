@@ -5,9 +5,10 @@ use axum::{
     routing::{get, post, MethodRouter},
     Form, Json, Router,
 };
+use mysql::prelude::ToValue;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::sync::Arc;
+use std::{process::id, sync::Arc};
 use tower_http::services::{ServeDir, ServeFile};
 
 use rand::Rng;
@@ -43,6 +44,7 @@ async fn main() {
             .route("/do_insert_2", post(accept_form))
             .route("/hello/:name", get(get_name))
             .route("/get_email_by_id/:id", get(get_email_by_id))
+            .route("/insert_test", post(insert_testt))
             .with_state(Arc::new(AppState { db: pool.clone(), pg: x.clone() }))
             .merge(using_serve_file_from_a_route());
     
@@ -70,6 +72,11 @@ struct User {
 struct Testt {
     id: i32,
     name: String,
+}
+
+#[derive(sqlx::FromRow, Serialize, Debug, Deserialize)]
+struct InsertTest {
+    name :String
 }
 
 
@@ -100,7 +107,7 @@ async fn foo_bar(State(data): State<Arc<AppState>>) -> impl IntoResponse {
 }
 
 async fn fetch_all(State(data): State<Arc<AppState>>) -> Result<Json<Vec<Testt>>, FetchErr> {
-    let resx = sqlx::query_as::<_, Testt>("select id, name from testt where id in( 4, 5)")
+    let resx = sqlx::query_as::<_, Testt>("select id, name from testt ")
     .fetch_all(&data.pg)
     .await;
 
@@ -175,6 +182,25 @@ async fn get_email_by_id(
         })),
     }
 }
+
+async fn insert_testt(
+    State(data): State<Arc<AppState>>,
+    Json(payload): Json<InsertTest>,) ->   (StatusCode, Json<String>){
+        
+        let rows = sqlx::query( "insert into testt(name) values ($1)")
+        .bind(payload.name)
+        .execute(&data.pg)
+        .await;
+
+        match rows {
+            Ok(_) => {
+                let rowx = String::from("Berhasil insert");
+                (StatusCode::CREATED, Json(rowx))
+            }
+            Err(e) =>  (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string())),
+        }
+
+    }
 
 async fn get_name(Path::<String>(name): Path<String>) -> impl IntoResponse {
     Json(json!(name))
