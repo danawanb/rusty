@@ -1,40 +1,39 @@
 use axum::{
-    extract::{path::ErrorKind, Path, State},
-    http::StatusCode,
-    response::{Html, IntoResponse, Response},
-    routing::{get, post, MethodRouter},
-    Form, Json, Router,
+    extract::{path::ErrorKind, Path, State}, http::StatusCode, response::{Html, IntoResponse, Response}, routing::{get, post, MethodRouter}, Extension, Form, Json, Router
 };
-use mysql::prelude::ToValue;
+
+mod user;
+pub mod db;
+use user::handlers::user_handlers;
+
+
+
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::{process::id, sync::Arc};
+use std::sync::Arc;
 use tower_http::services::{ServeDir, ServeFile};
 
 use rand::Rng;
-use sqlx::{mysql::{MySqlPool, MySqlPoolOptions}, postgres::PgPoolOptions, PgPool};
+use sqlx::{mysql::MySqlPool, PgPool};
 
 pub struct AppState {
     db: MySqlPool,
     pg: PgPool,
 }
 
+
 #[tokio::main]
 async fn main() {
-    let pool = MySqlPoolOptions::new()
-        .max_connections(100)
-        .connect("mysql://root:@localhost:3306/test")
-        .await
-        .unwrap();
 
-    let poolx = PgPoolOptions::new()
-        .max_connections(100)
-        .connect("postgres://senpai:senpai1969@localhost/senpai")
-        .await;
+    let mysql = db::new_mysql("mysql://root:@localhost:3306/test".to_string(), 100);
+    let poll_postgre = db::new_postgres("postgres://senpai:senpai1969@localhost/senpai".to_string(), 100);
 
-    match poolx {
-        Ok(x) => {
-            let app = Router::new()
+    let pl = mysql.await;
+    let pg = poll_postgre.await;
+ 
+    let state = Arc::new(AppState { db: pl.clone(), pg: pg.clone() });
+    let state2 = Arc::new(AppState { db: pl.clone(), pg: pg.clone() });
+    let app = Router::new()
             // .route("/api/healthchecker", get(get_foo))
             .route("/random", get(get_random_color))
             .route("/all", get(fetch_all))
@@ -45,20 +44,23 @@ async fn main() {
             .route("/hello/:name", get(get_name))
             .route("/get_email_by_id/:id", get(get_email_by_id))
             .route("/insert_test", post(insert_testt))
-            .with_state(Arc::new(AppState { db: pool.clone(), pg: x.clone() }))
+            .with_state(state)
+            .nest("/user", user_handlers())
+            .with_state(state2)
             .merge(using_serve_file_from_a_route());
+         
+           
     
         // run our app with hyper, listening globally on port 3000
     
         println!("🚀 Server started successfully");
         let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
         axum::serve(listener, app).await.unwrap();
-        }
-        Err(x) => panic!("{:?}", x)
-    }
+  
 
     
 }
+
 
 #[derive(sqlx::FromRow, Serialize, Debug, Deserialize)]
 #[allow(dead_code)]
@@ -79,10 +81,6 @@ struct InsertTest {
     name :String
 }
 
-
-async fn hello_name() -> impl IntoResponse {
-    StatusCode::OK;
-}
 
 async fn foo_bar(State(data): State<Arc<AppState>>) -> impl IntoResponse {
     let result = sqlx::query_as::<_, User>("SELECT user, email FROM users LIMIT 1")
