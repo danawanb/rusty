@@ -1,12 +1,14 @@
 use axum::{
-    extract::{path::ErrorKind, Path, State}, http::StatusCode, response::{Html, IntoResponse, Response}, routing::{get, post, MethodRouter}, Extension, Form, Json, Router
+    extract::{path::ErrorKind, Path, State},
+    http::StatusCode,
+    response::{Html, IntoResponse, Response},
+    routing::{get, post, MethodRouter},
+    Extension, Form, Json, Router,
 };
 
-mod user;
 pub mod db;
+mod user;
 use user::handlers::user_handlers;
-
-
 
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -21,46 +23,47 @@ pub struct AppState {
     pg: PgPool,
 }
 
-
 #[tokio::main]
 async fn main() {
-
     let mysql = db::new_mysql("mysql://root:@localhost:3306/test".to_string(), 100);
-    let poll_postgre = db::new_postgres("postgres://senpai:senpai1969@localhost/senpai".to_string(), 100);
+    let poll_postgre = db::new_postgres(
+        "postgres://senpai:senpai1969@localhost/senpai".to_string(),
+        100,
+    );
 
     let pl = mysql.await;
     let pg = poll_postgre.await;
- 
-    let state = Arc::new(AppState { db: pl.clone(), pg: pg.clone() });
-    let state2 = Arc::new(AppState { db: pl.clone(), pg: pg.clone() });
+
+    let state = Arc::new(AppState {
+        db: pl.clone(),
+        pg: pg.clone(),
+    });
+    let state2 = Arc::new(AppState {
+        db: pl.clone(),
+        pg: pg.clone(),
+    });
     let app = Router::new()
-            // .route("/api/healthchecker", get(get_foo))
-            .route("/random", get(get_random_color))
-            .route("/all", get(fetch_all))
-            .route("/bar", get(foo_bar))
-            .route("/insert_user", get(show_form))
-            .route("/do_insert", post(create_user))
-            .route("/do_insert_2", post(accept_form))
-            .route("/hello/:name", get(get_name))
-            .route("/get_email_by_id/:id", get(get_email_by_id))
-            .route("/insert_test", post(insert_testt))
-            .with_state(state)
-            .nest("/user", user_handlers())
-            .with_state(state2)
-            .merge(using_serve_file_from_a_route());
-         
-           
-    
-        // run our app with hyper, listening globally on port 3000
-    
-        println!("🚀 Server started successfully");
-        let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
-        axum::serve(listener, app).await.unwrap();
-  
+        // .route("/api/healthchecker", get(get_foo))
+        .route("/random", get(get_random_color))
+        .route("/all", get(fetch_all))
+        .route("/bar", get(foo_bar))
+        .route("/insert_user", get(show_form))
+        .route("/do_insert", post(create_user))
+        .route("/do_insert_2", post(accept_form))
+        .route("/hello/:name", get(get_name))
+        .route("/get_email_by_id/:id", get(get_email_by_id))
+        .route("/insert_test", post(insert_testt))
+        .with_state(state)
+        .nest("/user", user_handlers())
+        .with_state(state2)
+        .merge(using_serve_file_from_a_route());
 
-    
+    // run our app with hyper, listening globally on port 3000
+
+    println!("🚀 Server started successfully");
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    axum::serve(listener, app).await.unwrap();
 }
-
 
 #[derive(sqlx::FromRow, Serialize, Debug, Deserialize)]
 #[allow(dead_code)]
@@ -78,9 +81,8 @@ struct Testt {
 
 #[derive(sqlx::FromRow, Serialize, Debug, Deserialize)]
 struct InsertTest {
-    name :String
+    name: String,
 }
-
 
 async fn foo_bar(State(data): State<Arc<AppState>>) -> impl IntoResponse {
     let result = sqlx::query_as::<_, User>("SELECT user, email FROM users LIMIT 1")
@@ -96,7 +98,7 @@ async fn foo_bar(State(data): State<Arc<AppState>>) -> impl IntoResponse {
             "mysql" : x,
             "pg" : res2.unwrap(),
         })),
-        
+
         Err(y) => Json(json!({
             "error" : true,
             "message" : y.to_string(),
@@ -106,23 +108,19 @@ async fn foo_bar(State(data): State<Arc<AppState>>) -> impl IntoResponse {
 
 async fn fetch_all(State(data): State<Arc<AppState>>) -> Result<Json<Vec<Testt>>, FetchErr> {
     let resx = sqlx::query_as::<_, Testt>("select id, name from testt ")
-    .fetch_all(&data.pg)
-    .await;
+        .fetch_all(&data.pg)
+        .await;
 
-    
-   match resx {
-       Ok(x) => {
-        if x.is_empty() {
-            Err(FetchErr::NoData("Tidak ada data".to_string()))
-        } else {
-            Ok(Json(x))
+    match resx {
+        Ok(x) => {
+            if x.is_empty() {
+                Err(FetchErr::NoData("Tidak ada data".to_string()))
+            } else {
+                Ok(Json(x))
+            }
         }
-        },
-       Err(x) => {
-        Err(FetchErr::NoData(format!("Terjadi error yaknis : {:?}", x)))
-       }
-   }
-
+        Err(x) => Err(FetchErr::NoData(format!("Terjadi error yaknis : {:?}", x))),
+    }
 }
 
 fn using_serve_file_from_a_route() -> Router {
@@ -183,22 +181,21 @@ async fn get_email_by_id(
 
 async fn insert_testt(
     State(data): State<Arc<AppState>>,
-    Json(payload): Json<InsertTest>,) ->   (StatusCode, Json<String>){
-        
-        let rows = sqlx::query( "insert into testt(name) values ($1)")
+    Json(payload): Json<InsertTest>,
+) -> (StatusCode, Json<String>) {
+    let rows = sqlx::query("insert into testt(name) values ($1)")
         .bind(payload.name)
         .execute(&data.pg)
         .await;
 
-        match rows {
-            Ok(_) => {
-                let rowx = String::from("Berhasil insert");
-                (StatusCode::CREATED, Json(rowx))
-            }
-            Err(e) =>  (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string())),
+    match rows {
+        Ok(_) => {
+            let rowx = String::from("Berhasil insert");
+            (StatusCode::CREATED, Json(rowx))
         }
-
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(e.to_string())),
     }
+}
 
 async fn get_name(Path::<String>(name): Path<String>) -> impl IntoResponse {
     Json(json!(name))
@@ -263,7 +260,7 @@ impl IntoResponse for FetchErr {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
             FetchErr::Default => (StatusCode::INTERNAL_SERVER_ERROR, "Err".to_string()),
-            FetchErr::NoData(x)=> (StatusCode::BAD_REQUEST, x),
+            FetchErr::NoData(x) => (StatusCode::BAD_REQUEST, x),
         };
         let body = Json(json!({
             "error": error_message,
