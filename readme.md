@@ -1,1 +1,4 @@
-Simple axumrs server using mysql and postgres
+
+# AXUM Rust
+
+Simple Server using axum rust with mysql and postgre
