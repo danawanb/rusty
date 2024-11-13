@@ -27,7 +27,7 @@ pub struct AppState {
 async fn main() {
     let mysql = db::new_mysql("mysql://root:@localhost:3306/test".to_string(), 100);
     let poll_postgre = db::new_postgres(
-        "postgres://senpai:senpai1969@localhost/senpai".to_string(),
+        "postgres://senpai:senpai1969@localhost:5432/svelte".to_string(),
         100,
     );
 
