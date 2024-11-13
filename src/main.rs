@@ -47,7 +47,6 @@ async fn main() {
         .route("/random", get(get_random_color))
         .route("/all", get(fetch_all))
         .route("/bar", get(foo_bar))
-        .route("/insert_user", get(show_form))
         .route("/do_insert", post(create_user))
         .route("/do_insert_2", post(accept_form))
         .route("/hello/:name", get(get_name))
@@ -212,33 +211,6 @@ enum AuthError {
 enum FetchErr {
     Default,
     NoData(String),
-}
-async fn show_form() -> Html<&'static str> {
-    Html(
-        r#"
-        <!doctype html>
-        <html>
-            <head>
-            
-            </head>
-            <body>
-                <form action="/do_insert_2" method="post">
-                    <label for="user">
-                        Enter your name:
-                        <input type="text" name="user" id="user">
-                    </label>
-
-                    <label>
-                        Enter your email:
-                        <input type="text" name="email" id="user">
-                    </label>
-
-                    <input type="submit" value="Subscribe!">
-                </form>
-            </body>
-        </html>
-        "#,
-    )
 }
 
 impl IntoResponse for AuthError {
